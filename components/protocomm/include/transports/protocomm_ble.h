@@ -105,6 +105,9 @@ esp_err_t protocomm_ble_start(protocomm_t *pc, const protocomm_ble_config_t *con
  */
 esp_err_t protocomm_ble_stop(protocomm_t *pc);
 
+esp_err_t protocomm_ble_pause(protocomm_t *pc);
+esp_err_t protocomm_ble_resume(protocomm_t *pc);
+
 #ifdef __cplusplus
 }
 #endif

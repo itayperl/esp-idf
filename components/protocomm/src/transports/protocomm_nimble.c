@@ -39,6 +39,8 @@ static int num_chr_dsc;
 /*  Standard 16 bit UUID for characteristic User Description*/
 #define BLE_GATT_UUID_CHAR_DSC              0x2901
 
+static bool g_paused = true;
+
 /********************************************************
 *       Maintain database for Attribute specific data   *
 ********************************************************/
@@ -173,6 +175,10 @@ static void
 simple_ble_advertise(void)
 {
     int rc;
+
+    if (g_paused) {
+        return;
+    }
 
     adv_data.flags = (BLE_HS_ADV_F_DISC_GEN | BLE_HS_ADV_F_BREDR_UNSUP);
     adv_data.num_uuids128 = 1;
@@ -314,6 +320,10 @@ gatt_svr_chr_access(uint16_t conn_handle, uint16_t attr_handle,
 
     switch (ctxt->op) {
     case BLE_GATT_ACCESS_OP_READ_CHR:
+        if (g_paused) {
+            return BLE_ATT_ERR_READ_NOT_PERMITTED;
+        }
+
         ESP_LOGD(TAG, "Read attempeted for Characterstic UUID = %s, attr_handle = %d",
                  ble_uuid_to_str(ctxt->chr->uuid, buf), attr_handle);
 
@@ -328,6 +338,10 @@ gatt_svr_chr_access(uint16_t conn_handle, uint16_t attr_handle,
         return rc == 0 ? 0 : BLE_ATT_ERR_INSUFFICIENT_RES;
 
     case BLE_GATT_ACCESS_OP_WRITE_CHR:
+        if (g_paused) {
+            return BLE_ATT_ERR_WRITE_NOT_PERMITTED;
+        }
+
         uuid = (uint8_t *) calloc(BLE_UUID128_VAL_LENGTH, sizeof(uint8_t));
         if (!uuid) {
             ESP_LOGE(TAG, "Error allocating memory for 128 bit UUID");
@@ -894,6 +908,22 @@ esp_err_t protocomm_ble_start(protocomm_t *pc, const protocomm_ble_config_t *con
     }
 
     ESP_LOGV(TAG, "Waiting for client to connect ......");
+    return ESP_OK;
+}
+
+esp_err_t protocomm_ble_pause(protocomm_t *pc) {
+    if (!g_paused) {
+        g_paused = true;
+        ble_gap_adv_stop();
+    }
+    return ESP_OK;
+}
+
+esp_err_t protocomm_ble_resume(protocomm_t *pc) {
+    if (g_paused) {
+        g_paused = false;
+        simple_ble_advertise();
+    }
     return ESP_OK;
 }
 
